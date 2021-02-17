@@ -4,54 +4,40 @@ import (
 	"errors"
 	"flag"
 	"io"
-	"reflect"
+	"os"
 )
 
 var (
-	ErrInvalidInput = errors.New("invalid input")
+	ErrInvalidInput  = errors.New("invalid input")
+	ErrBadStruct     = errors.New("bad struct")
+	ErrParsing       = errors.New("error parsing flags")
+	ErrTypeAssertion = errors.New("error asserting types")
 )
 
-type encoder struct {
-	ErrorHandling flag.ErrorHandling
-	UsageText     string
-	Output        io.Writer
-}
-
-func (e *encoder) Parse(i interface{}, args []string) error {
-	t := reflect.TypeOf(i)
-	if t == nil {
-		return ErrInvalidInput
-	}
-	return nil
-}
-
 // ContinueOnError works the same as it does in the standard library
-func ContinueOnError() func(*encoder) {
-	return func(e *encoder) {
+func ContinueOnError() func(*parser) {
+	return func(e *parser) {
 		e.ErrorHandling = flag.ContinueOnError
 	}
 }
 
-// UsageText is the text to print before displaying the flagset options.
-func UsageText(text string) func(*encoder) {
-	return func(e *encoder) {
-		e.UsageText = text
-	}
-}
-
-func Output(w io.Writer) func(*encoder) {
-	return func(e *encoder) {
+func Output(w io.Writer) func(*parser) {
+	return func(e *parser) {
 		e.Output = w
 	}
 }
 
-type option func(*encoder)
+type option func(*parser)
 
-// Parse takes a pointer to a struct and modifies it
-func Parse(i interface{}, opts ...option) {
-	t := reflect.TypeOf(i)
-	if t == nil {
-		//todo: error
-		return
+// Parse takes a pointer to a struct and modifies it to include annotated
+// flag values
+func Parse(i interface{}, opts ...option) error {
+	enc := &parser{
+		ErrorHandling: flag.ExitOnError,
+		Output:        os.Stderr,
 	}
+	for _, opt := range opts {
+		opt(enc)
+	}
+	return enc.Parse(i, os.Args[1:])
 }
