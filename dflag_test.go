@@ -14,9 +14,10 @@ type happyCase struct {
 func TestHappyCase(t *testing.T) {
 	e := &parser{
 		ErrorHandling: flag.ContinueOnError,
+		Args:          args("-happy", "yes"),
 	}
 	var h happyCase
-	err := e.Parse(&h, args("-happy", "yes"))
+	err := e.Parse(&h)
 	if err != nil {
 		t.Error("Error calling parse: ", err)
 	}
@@ -54,10 +55,11 @@ func TestInvalidValues(t *testing.T) {
 	}
 	e := &parser{
 		ErrorHandling: flag.ContinueOnError,
+		Args:          args("-happy", "yes"),
 	}
 	for _, tc := range cases {
 		t.Run("", func(t *testing.T) {
-			err := e.Parse(tc, args("-happy", "yes"))
+			err := e.Parse(tc)
 			if err != ErrInvalidInput {
 				t.Error("Expected invalid input, got: ", err)
 			}
@@ -72,9 +74,10 @@ type testAnnotated struct {
 func TestAnnotated(t *testing.T) {
 	e := &parser{
 		ErrorHandling: flag.ContinueOnError,
+		Args:          args("na"),
 	}
 	var annotated testAnnotated
-	err := e.Parse(&annotated, args("na"))
+	err := e.Parse(&annotated)
 	if err != nil {
 		t.Error("Error parsing: ", err)
 	}
@@ -97,18 +100,19 @@ type testStrings struct {
 func TestFlagParsed(t *testing.T) {
 	e := &parser{
 		ErrorHandling: flag.ContinueOnError,
+		Args: args(
+			"-zero", "0",
+			"-one", "1",
+			"-two", "2",
+			"-three", "3",
+			"-onefour", "4",
+			"-onefive", "5",
+			"-onesix", "6",
+			"-oneseven", "7",
+		),
 	}
 	var data testStrings
-	err := e.Parse(&data, args(
-		"-zero", "0",
-		"-one", "1",
-		"-two", "2",
-		"-three", "3",
-		"-onefour", "4",
-		"-onefive", "5",
-		"-onesix", "6",
-		"-oneseven", "7",
-	))
+	err := e.Parse(&data)
 	if err != nil {
 		t.Error("error: ", err)
 	}
@@ -128,5 +132,5 @@ func TestFlagParsed(t *testing.T) {
 }
 
 func args(a ...string) []string {
-	return append([]string{}, a...)
+	return append([]string{"cmd"}, a...)
 }

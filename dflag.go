@@ -9,35 +9,62 @@ import (
 
 var (
 	ErrInvalidInput  = errors.New("invalid input")
-	ErrBadStruct     = errors.New("bad struct")
-	ErrParsing       = errors.New("error parsing flags")
+	ErrBadStruct     = errors.New("bad struct tags")
 	ErrTypeAssertion = errors.New("error asserting types")
+	ErrParsing       = errors.New("error parsing values")
 )
 
-// ContinueOnError works the same as it does in the standard library
+// ContinueOnError works the same as it does in the standard library.
+// Normally, calls to Parse() will os.Exit() on error. Passing this option
+// in allows clients to handle the error themselves.
 func ContinueOnError() func(*parser) {
 	return func(e *parser) {
 		e.ErrorHandling = flag.ContinueOnError
 	}
 }
 
+// Output allows clients to change the stream that Usage() writes to. By
+// default, it is stderr.
 func Output(w io.Writer) func(*parser) {
 	return func(e *parser) {
 		e.Output = w
 	}
 }
 
+// UsageText provides the text that will be printed before printing the
+// command defaults. By default, it will just be "usage: ".
+func UsageText(text string) func(*parser) {
+	return func(p *parser) {
+		p.UsageText = text
+	}
+}
+
 type option func(*parser)
 
-// Parse takes a pointer to a struct and modifies it to include annotated
-// flag values
+var state = &parser{
+	ErrorHandling: flag.ExitOnError,
+	Output:        os.Stderr,
+	Args:          os.Args,
+}
+
+// Parse parses the command-line flags from os.Args[1:]. Must be called after
+// all flags are defined and before flags are accessed by the program.
+// i must be a pointer to a struct.
 func Parse(i interface{}, opts ...option) error {
-	enc := &parser{
-		ErrorHandling: flag.ExitOnError,
-		Output:        os.Stderr,
-	}
 	for _, opt := range opts {
-		opt(enc)
+		opt(state)
 	}
-	return enc.Parse(i, os.Args[1:])
+	return state.Parse(i)
+}
+
+// Args returns the non-flag command-line arguments.
+func Args() []string {
+	return state.flagset.Args()
+}
+
+// Arg returns the i'th command-line argument. Arg(0) is the first remaining
+// argument after flags have been processed. Arg returns an empty string if
+// the requested element does not exist.
+func Arg(i int) string {
+	return state.flagset.Arg(i)
 }

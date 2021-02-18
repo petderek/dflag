@@ -1,17 +1,24 @@
 package dflag
 
 import (
+	"errors"
 	"flag"
+	"fmt"
 	"io"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 type parser struct {
 	ErrorHandling flag.ErrorHandling
 	UsageText     string
 	Output        io.Writer
+	Args          []string
+
+	flagset flag.FlagSet
 }
 
 const (
@@ -20,7 +27,29 @@ const (
 	keyUsage = "usage"
 )
 
-func (e *parser) Parse(i interface{}, args []string) error {
+func (p *parser) Parse(i interface{}) error {
+	p.flagset = *flag.NewFlagSet(p.Args[0], p.ErrorHandling)
+	p.flagset.SetOutput(p.Output)
+	p.flagset.Usage = p.getUsage()
+
+	err := p.parse(i)
+	if err != nil && p.ErrorHandling == flag.ExitOnError {
+		// ErrParsing indicates a client issue. Printing usage should
+		// provide hints at how to fix
+		if errors.Is(err, ErrParsing) {
+			p.flagset.Usage()
+		} else {
+			// Other errors here indicate issues with the struct that
+			// should be fixed by the developer.
+			_, _ = fmt.Fprintf(p.Output, "Error in flag structure: %s", err)
+		}
+		os.Exit(2)
+	}
+
+	return err
+}
+
+func (p *parser) parse(i interface{}) error {
 	t := reflect.TypeOf(i)
 	v := reflect.ValueOf(i)
 	switch {
@@ -32,7 +61,6 @@ func (e *parser) Parse(i interface{}, args []string) error {
 		return ErrInvalidInput
 	}
 
-	fs := flag.NewFlagSet("", e.ErrorHandling)
 	pointers := make([]interface{}, t.Elem().NumField())
 	for i := 0; i < t.Elem().NumField(); i++ {
 		field := t.Elem().Field(i)
@@ -53,20 +81,20 @@ func (e *parser) Parse(i interface{}, args []string) error {
 			if e != nil {
 				return ErrBadStruct
 			}
-			pointers[i] = fs.Int(name, num, usage)
+			pointers[i] = p.flagset.Int(name, num, usage)
 		case reflect.String:
-			pointers[i] = fs.String(name, value, usage)
+			pointers[i] = p.flagset.String(name, value, usage)
 		case reflect.Bool:
 			boo, err := strconv.ParseBool(value)
 			if err != nil {
 				return ErrBadStruct
 			}
-			pointers[i] = fs.Bool(name, boo, usage)
+			pointers[i] = p.flagset.Bool(name, boo, usage)
 		}
 	}
 
-	if err := fs.Parse(args); err != nil {
-		return err
+	if err := p.flagset.Parse(p.Args[1:]); err != nil {
+		return ErrParsing
 	}
 
 	for i, ptr := range pointers {
@@ -96,4 +124,18 @@ func (e *parser) Parse(i interface{}, args []string) error {
 		}
 	}
 	return nil
+}
+
+func (p *parser) getUsage() func() {
+	var once sync.Once
+	usage := "usage: "
+	if p.UsageText != "" {
+		usage = p.UsageText
+	}
+	return func() {
+		once.Do(func() {
+			_, _ = fmt.Fprint(p.Output, usage, "\n")
+			p.flagset.PrintDefaults()
+		})
+	}
 }

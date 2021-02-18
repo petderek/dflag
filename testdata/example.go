@@ -1,3 +1,5 @@
+// +build example
+
 package main
 
 import (
@@ -12,6 +14,8 @@ var flags = struct {
 	NewLines bool   `value:"true" usage:"if we should print each word on its own line"`
 }{}
 
+// to test this:
+// go run -tags=example ./example.go -c 5 -word bar -newlines=false
 func main() {
 	dflag.Parse(&flags)
 	for i := 0; i < flags.Count; i++ {
