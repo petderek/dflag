@@ -8,13 +8,15 @@ import (
 
 type happyCase struct {
 	Happy string
+	Hippy int
+	Hoppy bool
 	sad   string
 }
 
 func TestHappyCase(t *testing.T) {
 	e := &parser{
 		ErrorHandling: flag.ContinueOnError,
-		Args:          args("-happy", "yes"),
+		Args:          args("-happy", "yes", "-hippy", "42", "-hoppy", "true"),
 	}
 	var h happyCase
 	err := e.Parse(&h)
@@ -26,6 +28,22 @@ func TestHappyCase(t *testing.T) {
 	}
 }
 
+type dupes struct {
+	Dupe string
+	DUPE string
+}
+
+func TestDupes(t *testing.T) {
+	e := &parser{
+		ErrorHandling: flag.ContinueOnError,
+		Args:          args("-happy", "yes"),
+	}
+	var d dupes
+	shouldPanic(t, func() {
+		_ = e.Parse(&d)
+	})
+}
+
 func TestInvalidValues(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -35,19 +53,19 @@ func TestInvalidValues(t *testing.T) {
 	var (
 		str     = "string"
 		num     = 12
-		bool    = true
+		b       = true
 		iface   interface{}
 		nilface interface{} = nil
 	)
 	cases := []interface{}{
 		str,
 		num,
-		bool,
+		b,
 		iface,
 		nilface,
 		&str,
 		&num,
-		&bool,
+		&b,
 		&iface,
 		&nilface,
 		(*error)(nil),
@@ -59,10 +77,9 @@ func TestInvalidValues(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run("", func(t *testing.T) {
-			err := e.Parse(tc)
-			if err != ErrInvalidInput {
-				t.Error("Expected invalid input, got: ", err)
-			}
+			shouldPanic(t, func() {
+				t.Log(e.Parse(tc))
+			})
 		})
 	}
 }
@@ -133,4 +150,16 @@ func TestFlagParsed(t *testing.T) {
 
 func args(a ...string) []string {
 	return append([]string{"cmd"}, a...)
+}
+
+func shouldPanic(t *testing.T, f func()) {
+	t.Helper()
+	defer func() {
+		if r := recover(); r != nil {
+			t.Log("Panicked! But it was expected.")
+		} else {
+			t.Error("expected a panic, but was none")
+		}
+	}()
+	f()
 }

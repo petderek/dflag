@@ -33,16 +33,20 @@ func (p *parser) Parse(i interface{}) error {
 	p.flagset.Usage = p.getUsage()
 
 	err := p.parse(i)
-	if err != nil && p.ErrorHandling == flag.ExitOnError {
+	if err == nil {
+		return nil
+	}
+
+	// These errors indicate that the struct is malformed and should be fixed
+	// by the developer.
+	if errors.Is(err, errInvalidInput) || errors.Is(err, errBadStruct) || errors.Is(err, errTypeAssertion) {
+		panic(err)
+	}
+
+	if p.ErrorHandling == flag.ExitOnError {
 		// ErrParsing indicates a client issue. Printing usage should
 		// provide hints at how to fix
-		if errors.Is(err, ErrParsing) {
-			p.flagset.Usage()
-		} else {
-			// Other errors here indicate issues with the struct that
-			// should be fixed by the developer.
-			_, _ = fmt.Fprintf(p.Output, "Error in flag structure: %s", err)
-		}
+		p.flagset.Usage()
 		os.Exit(2)
 	}
 
@@ -54,11 +58,11 @@ func (p *parser) parse(i interface{}) error {
 	v := reflect.ValueOf(i)
 	switch {
 	case t == nil:
-		return ErrInvalidInput
+		return errInvalidInput
 	case t.Kind() != reflect.Ptr || v.Kind() != reflect.Ptr:
-		return ErrInvalidInput
+		return errInvalidInput
 	case t.Elem().Kind() != reflect.Struct || v.Elem().Kind() != reflect.Struct:
-		return ErrInvalidInput
+		return errInvalidInput
 	}
 
 	pointers := make([]interface{}, t.Elem().NumField())
@@ -79,7 +83,7 @@ func (p *parser) parse(i interface{}) error {
 		case reflect.Int:
 			num, e := strconv.Atoi(value)
 			if value != "" && e != nil {
-				return ErrBadStruct
+				return errBadStruct
 			}
 			pointers[i] = p.flagset.Int(name, num, usage)
 		case reflect.String:
@@ -87,7 +91,7 @@ func (p *parser) parse(i interface{}) error {
 		case reflect.Bool:
 			boo, err := strconv.ParseBool(value)
 			if value != "" && err != nil {
-				return ErrBadStruct
+				return errBadStruct
 			}
 			pointers[i] = p.flagset.Bool(name, boo, usage)
 		}
@@ -107,19 +111,19 @@ func (p *parser) parse(i interface{}) error {
 			if i, ok := ptr.(*int); ok {
 				val.SetInt(int64(*i))
 			} else {
-				return ErrTypeAssertion
+				return errTypeAssertion
 			}
 		case reflect.String:
 			if s, ok := ptr.(*string); ok {
 				val.SetString(*s)
 			} else {
-				return ErrTypeAssertion
+				return errTypeAssertion
 			}
 		case reflect.Bool:
 			if b, ok := ptr.(*bool); ok {
 				val.SetBool(*b)
 			} else {
-				return ErrTypeAssertion
+				return errTypeAssertion
 			}
 		}
 	}
