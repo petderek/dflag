@@ -78,7 +78,7 @@ func (p *parser) parse(i interface{}) error {
 		switch field.Type.Kind() {
 		case reflect.Int:
 			num, e := strconv.Atoi(value)
-			if e != nil {
+			if value != "" && e != nil {
 				return ErrBadStruct
 			}
 			pointers[i] = p.flagset.Int(name, num, usage)
@@ -86,7 +86,7 @@ func (p *parser) parse(i interface{}) error {
 			pointers[i] = p.flagset.String(name, value, usage)
 		case reflect.Bool:
 			boo, err := strconv.ParseBool(value)
-			if err != nil {
+			if value != "" && err != nil {
 				return ErrBadStruct
 			}
 			pointers[i] = p.flagset.Bool(name, boo, usage)

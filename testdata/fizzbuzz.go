@@ -23,18 +23,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	for i := 1; i <= 50; i++ {
+	for i := 1; i <= 25; i++ {
 		fizzy := i%flags.FizzOn == 0
 		buzzy := i%flags.BuzzOn == 0
 
 		fmt.Print(i, " ")
-		switch {
-		case fizzy && buzzy:
-			fmt.Println("fizzbuzz")
-		case fizzy:
-			fmt.Println("fizz")
-		case buzzy:
-			fmt.Println("buzz")
+		if fizzy {
+			fmt.Print("fizz")
 		}
+		if buzzy {
+			fmt.Print("buzz")
+		}
+		fmt.Print("\n")
 	}
 }
