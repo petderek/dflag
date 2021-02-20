@@ -1,6 +1,8 @@
 # dflag
 yet another flag library
 
+![](https://github.com/petderek/dflag/actions/workflows/go.yml/badge.svg)
+
 dflag is a way to bind cli flags to a struct instead of using individual variables.
 It emphasizes simplicity and terseness over expressiveness and deep featuresets. Dflag
 mostly replicates the flag stdlib but with less boilerplate.
