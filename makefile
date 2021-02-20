@@ -1,5 +1,5 @@
-.PHONY: release vet fmt test
-release: vet fmt test
+.PHONY: release vet check test
+release: vet check test
 
 vet:
 	go vet ./...
