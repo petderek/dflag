@@ -29,6 +29,22 @@ func TestHappyCase(t *testing.T) {
 	}
 }
 
+func TestDynamicDefaults(t *testing.T) {
+	e := &parser{
+		ErrorHandling: flag.ContinueOnError,
+		Args:          args("-hippy", "42", "-hoppy", "true"),
+	}
+	var h happyCase
+	h.Happy = "potato"
+	err := e.Parse(&h)
+	if err != nil {
+		t.Error("Error calling parse: ", err)
+	}
+	if h.Happy != "potato" {
+		t.Errorf("Expected value to be \"potato\", was actually: \"%s\"", h.Happy)
+	}
+}
+
 type dupes struct {
 	Dupe string
 	DUPE string

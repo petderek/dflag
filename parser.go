@@ -166,6 +166,15 @@ func (p *parser) parse(i interface{}) error {
 		if !node.ValueField.CanSet() || node.Pointer == nil {
 			continue
 		}
+
+		// If it wasn't set via flag, but a default value was passed into the struct,
+		// lets _not_ change the default value. Note that we can't detect if the zero
+		// value was explicitly set in the struct, but we can if it was explicitly set
+		// in the flag.
+		if !node.SetViaFlag && node.ValueField.IsValid() && !node.ValueField.IsZero() {
+			continue
+		}
+
 		switch node.ValueField.Kind() {
 		case reflect.Int:
 			if i, ok := node.Pointer.(*int); ok {
