@@ -66,7 +66,7 @@ func (p *parser) parse(i interface{}) error {
 	}
 
 	pointers := make([]interface{}, t.Elem().NumField())
-	//requiredParams := make([]bool, t.Elem().NumField())
+	required := make([]bool, t.Elem().NumField())
 	for i := 0; i < t.Elem().NumField(); i++ {
 		field := t.Elem().Field(i)
 		if !v.Elem().Field(i).CanSet() {
@@ -78,6 +78,9 @@ func (p *parser) parse(i interface{}) error {
 		}
 		value := field.Tag.Get(keyValue)
 		usage := field.Tag.Get(keyUsage)
+
+		tkns := getTokens(field.Tag)
+		required[i] = tkns.hasValue("required")
 
 		switch field.Type.Kind() {
 		case reflect.Int:
@@ -104,6 +107,9 @@ func (p *parser) parse(i interface{}) error {
 	for i, ptr := range pointers {
 		val := v.Elem().Field(i)
 		if !val.CanSet() || ptr == nil {
+			if required[i] {
+				return ErrMissingArgument
+			}
 			continue
 		}
 		switch val.Kind() {
@@ -142,4 +148,28 @@ func (p *parser) getUsage() func() {
 			p.flagset.PrintDefaults()
 		})
 	}
+}
+
+type tokens struct {
+	data []string
+}
+
+// dflag tokens are of the form:
+// `dflag:"token1,token2"`
+func getTokens(tag reflect.StructTag) tokens {
+	t, ok := tag.Lookup("dflag")
+	if !ok {
+		return tokens{}
+	}
+	data := strings.Split(t, ",")
+	return tokens{data: data}
+}
+
+func (t tokens) hasValue(value string) bool {
+	for _, v := range t.data {
+		if v == value {
+			return true
+		}
+	}
+	return false
 }
