@@ -3,6 +3,7 @@ package dflag
 import (
 	"flag"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -146,6 +147,41 @@ func TestFlagParsed(t *testing.T) {
 	}) {
 		t.Error("not deeply equal: ", data)
 	}
+}
+
+type requiredArgs struct {
+	Zero int    `required:"true"`
+	One  bool   `required:"T"` // strconv.ParseBool accepts T as true
+	Two  string `required:"1"` // strconv.ParseBool accepts 1 as true
+}
+
+func TestRequiredArgsHappy(t *testing.T) {
+	e := &parser{
+		ErrorHandling: flag.ContinueOnError,
+		Args: args(
+			"-zero=0",
+			"-one",
+			"-two=ok",
+		),
+	}
+
+	if err := e.Parse(&requiredArgs{}); err != nil {
+		t.Error("Expected error to be nil, was: ", err)
+	}
+}
+
+func TestRequiredArgsSad(t *testing.T) {
+	builder := &strings.Builder{}
+	e := &parser{
+		ErrorHandling: flag.ContinueOnError,
+		Args:          args(),
+		Output:        builder,
+	}
+
+	if err := e.Parse(&requiredArgs{}); err == nil {
+		t.Error("Expected error to be to be thrown, but was nil.")
+	}
+	t.Log(builder.String())
 }
 
 func args(a ...string) []string {

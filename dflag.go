@@ -8,10 +8,11 @@ import (
 )
 
 var (
-	ErrParsing       = errors.New("error parsing values")
-	errInvalidInput  = errors.New("invalid input")
-	errBadStruct     = errors.New("bad struct tags")
-	errTypeAssertion = errors.New("error asserting types")
+	ErrParsing         = errors.New("error parsing values")
+	ErrMissingArgument = errors.New("missing a required argument")
+	errInvalidInput    = errors.New("invalid input")
+	errBadStruct       = errors.New("bad struct tags")
+	errTypeAssertion   = errors.New("error asserting types")
 )
 
 // ContinueOnError works the same as it does in the standard library.
