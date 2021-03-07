@@ -66,12 +66,12 @@ func (p *parser) parse(i interface{}) error {
 	}
 
 	pointers := make([]interface{}, t.Elem().NumField())
+	//requiredParams := make([]bool, t.Elem().NumField())
 	for i := 0; i < t.Elem().NumField(); i++ {
 		field := t.Elem().Field(i)
 		if !v.Elem().Field(i).CanSet() {
 			continue
 		}
-
 		name := field.Tag.Get(keyName)
 		if name == "" {
 			name = strings.ToLower(field.Name)

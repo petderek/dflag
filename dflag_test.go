@@ -148,6 +148,38 @@ func TestFlagParsed(t *testing.T) {
 	}
 }
 
+type requiredArgs struct {
+	Zero int    `dflag:"required"`
+	One  bool   `dflag:"required"`
+	Two  string `dflag:"required"`
+}
+
+func TestRequiredArgsHappy(t *testing.T) {
+	e := &parser{
+		ErrorHandling: flag.ContinueOnError,
+		Args: args(
+			"-zero=0",
+			"-one",
+			"-two=ok",
+		),
+	}
+
+	if err := e.Parse(&requiredArgs{}); err != nil {
+		t.Error("Expected error to be nil, was: ", err)
+	}
+}
+
+func TestRequiredArgsSad(t *testing.T) {
+	e := &parser{
+		ErrorHandling: flag.ContinueOnError,
+		Args:          args(),
+	}
+
+	if err := e.Parse(&requiredArgs{}); err == nil {
+		t.Error("Expected error to be to be thrown, but was nil.")
+	}
+}
+
 func args(a ...string) []string {
 	return append([]string{"cmd"}, a...)
 }
