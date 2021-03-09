@@ -19,7 +19,7 @@ var flags = struct {
 // to test this:
 // go run -tags=urlparse ./testdata -url www.google.com -port 80
 func main() {
-	dflag.Parse(&flags, dflag.Logger(log.Default()))
+	dflag.Parse(&flags, dflag.Logger(log.New(os.Stdout, "", 0)))
 	actualUrl := flags.Url
 
 	// assumptions!!
