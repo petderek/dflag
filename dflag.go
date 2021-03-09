@@ -32,6 +32,14 @@ func Output(w io.Writer) func(*parser) {
 	}
 }
 
+// Logger allows clients to set a logger if they want more info about what
+// dflag is doing. Generally this is unneeded.
+func Logger(l logger) func(*parser) {
+	return func(e *parser) {
+		e.logger = l
+	}
+}
+
 // UsageText provides the text that will be printed before printing the
 // command defaults. By default, it will just be "usage: ".
 func UsageText(text string) func(*parser) {

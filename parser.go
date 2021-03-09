@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"reflect"
 	"strconv"
@@ -125,7 +126,7 @@ func (p *parser) parse(i interface{}) error {
 				return errBadStruct
 			}
 			node.Pointer = p.flagset.Int(node.Name(), num, node.Usage())
-		case reflect.String:
+		case reflect.String, reflect.Struct:
 			node.Pointer = p.flagset.String(node.Name(), node.Value(), node.Usage())
 		case reflect.Bool:
 			boo, err := strconv.ParseBool(node.Value())
@@ -197,6 +198,20 @@ func (p *parser) parse(i interface{}) error {
 				p.logger.Printf("bool type assertion failed on node (%s) for value (%s)", node.Name(), node.Value())
 				return errTypeAssertion
 			}
+		case reflect.Struct:
+			if _, ok := node.ValueField.Interface().(url.URL); ok {
+				if s, ok := node.Pointer.(*string); ok {
+					resolved, err := url.Parse(*s)
+					if err != nil {
+						// 🍝🍝🍝🍝🍝
+						fmt.Fprintln(p.Output, "Invalid URL: ", err)
+						return ErrParsing
+					}
+					node.ValueField.Set(reflect.ValueOf(*resolved))
+					continue
+				}
+			}
+			fallthrough
 		default:
 			p.logger.Printf("not recognized: %s %s %s", node.Name(), node.Value(), node.TypeField)
 		}

@@ -12,6 +12,7 @@ TESTDATA ?= $(shell pwd)/testdata
 
 test:
 	go test ./...
+	@go run -tags=urlparse $(TESTDATA) -url localhost
 	@go run -tags=fizzbuzz $(TESTDATA) -fizzon 5 -buzzon 3	
 	@go run -tags=dynamic $(TESTDATA)
 	@go run -tags=example $(TESTDATA)
