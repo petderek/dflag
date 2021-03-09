@@ -59,6 +59,8 @@ type parseNode struct {
 	TypeField  reflect.StructField
 	ValueField reflect.Value
 	Pointer    interface{}
+	Flag       *flag.Flag
+	SetViaFlag bool
 }
 
 func (p parseNode) Name() string {
@@ -103,11 +105,9 @@ func (p *parser) parse(i interface{}) error {
 		return errInvalidInput
 	}
 
-	var nodes []parseNode
-	var required []parseNode
-
+	nodes := make(map[string]*parseNode, t.Elem().NumField())
 	for i := 0; i < t.Elem().NumField(); i++ {
-		node := parseNode{
+		node := &parseNode{
 			TypeField:  t.Elem().Field(i),
 			ValueField: v.Elem().Field(i),
 		}
@@ -135,10 +135,7 @@ func (p *parser) parse(i interface{}) error {
 			}
 			node.Pointer = p.flagset.Bool(node.Name(), boo, node.Usage())
 		}
-		nodes = append(nodes, node)
-		if node.Required() {
-			required = append(required, node)
-		}
+		nodes[node.Name()] = node
 	}
 
 	if err := p.flagset.Parse(p.Args[1:]); err != nil {
@@ -146,21 +143,23 @@ func (p *parser) parse(i interface{}) error {
 		return ErrParsing
 	}
 
-	var shoulderr error
-	for _, node := range required {
-		var found bool
-		p.flagset.Visit(func(f *flag.Flag) {
-			if f.Name == node.Name() {
-				found = true
-			}
-		})
-		if !found {
+	p.flagset.Visit(func(f *flag.Flag) {
+		nodes[f.Name].SetViaFlag = true
+	})
+
+	p.flagset.VisitAll(func(f *flag.Flag) {
+		nodes[f.Name].Flag = f
+	})
+
+	var err error
+	for _, node := range nodes {
+		if node.Required() && !node.SetViaFlag {
 			_, _ = fmt.Fprintln(p.Output, "missing required arg: ", node.Name())
-			shoulderr = ErrMissingArgument
+			err = ErrMissingArgument
 		}
 	}
-	if shoulderr != nil {
-		return shoulderr
+	if err != nil {
+		return err
 	}
 
 	for _, node := range nodes {
