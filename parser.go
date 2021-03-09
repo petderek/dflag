@@ -23,9 +23,10 @@ type parser struct {
 }
 
 const (
-	keyName  = "name"
-	keyValue = "value"
-	keyUsage = "usage"
+	keyName     = "name"
+	keyValue    = "value"
+	keyUsage    = "usage"
+	keyRequired = "required"
 )
 
 func (p *parser) Parse(i interface{}) error {
@@ -78,6 +79,13 @@ func (p parseNode) Usage() string {
 
 // todo
 func (p parseNode) Required() bool {
+	if r := p.TypeField.Tag.Get(keyRequired); r != "" {
+		required, err := strconv.ParseBool(r)
+		if err != nil {
+			panic("fix your struct: " + err.Error())
+		}
+		return required
+	}
 	return false
 }
 
@@ -97,6 +105,8 @@ func (p *parser) parse(i interface{}) error {
 	}
 
 	var nodes []parseNode
+	var required []parseNode
+
 	for i := 0; i < t.Elem().NumField(); i++ {
 		node := parseNode{
 			TypeField:  t.Elem().Field(i),
@@ -127,11 +137,31 @@ func (p *parser) parse(i interface{}) error {
 			node.Pointer = p.flagset.Bool(node.Name(), boo, node.Usage())
 		}
 		nodes = append(nodes, node)
+		if node.Required() {
+			required = append(required, node)
+		}
 	}
 
 	if err := p.flagset.Parse(p.Args[1:]); err != nil {
 		p.logger.Printf("error parsing: %s", err)
 		return ErrParsing
+	}
+
+	var shoulderr error
+	for _, node := range required {
+		var found bool
+		p.flagset.Visit(func(f *flag.Flag) {
+			if f.Name == node.Name() {
+				found = true
+			}
+		})
+		if !found {
+			_, _ = fmt.Fprintln(p.Output, "missing required arg: ", node.Name())
+			shoulderr = ErrMissingArgument
+		}
+	}
+	if shoulderr != nil {
+		return shoulderr
 	}
 
 	for _, node := range nodes {

@@ -9,8 +9,8 @@ import (
 )
 
 var flags = struct {
-	FizzOn int `dflag:"required"`
-	BuzzOn int `dflag:"required"`
+	FizzOn int `required:"true" usage:"the divisor to print fizz"`
+	BuzzOn int `required:"true" usage:"the divisor to print buzz"`
 }{}
 
 // to test this:
