@@ -46,6 +46,7 @@ var state = &parser{
 	ErrorHandling: flag.ExitOnError,
 	Output:        os.Stderr,
 	Args:          os.Args,
+	logger:        &noopLogger{},
 }
 
 // Parse parses the command-line flags from os.Args[1:]. Must be called after
